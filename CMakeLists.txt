@@ -35,6 +35,8 @@ elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
     set(CMAKE_COMPILER_IS_MSVC TRUE)
 endif()
 
+# print compiler
+message(STATUS "Compiler: ${CMAKE_CXX_COMPILER_ID}")
 # if available, print version string (usually available)
 if(DEFINED CMAKE_CXX_COMPILER_VERSION)
     message(STATUS "Compiler version: ${CMAKE_CXX_COMPILER_VERSION}")
@@ -127,13 +129,13 @@ string(
 # that a DLL/EXE is in (e.g. if StackWalker was a DLL)
 install(FILES "${StackWalker_PDB_GEN}" DESTINATION bin)
 
-# StackWalker test program
+# build StackWalker test program
+set(sw_test StackWalkerTest)
 if(StackWalker_DISABLE_TESTS)
-    message(STATUS "Skipping tests")
+    message(STATUS "Skipping ${sw_test} (StackWalker_DISABLE_TESTS is TRUE)")
 else()
     enable_testing()
     # StackWalker test/demo program
-    set(sw_test StackWalkerTest)
     add_executable(${sw_test} Main/StackWalker/main.cpp)
     target_link_libraries(${sw_test} PRIVATE ${sw_lib})
     # for CTest
