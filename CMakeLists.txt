@@ -1,26 +1,43 @@
-project(StackWalker-project)
+cmake_minimum_required(VERSION 3.9)
 
-cmake_minimum_required(VERSION 3.5)
+# note: HOMEPAGE_URL was added in 3.12
+project(
+    StackWalker
+    VERSION 1.0.0
+    DESCRIPTION "Walking the callstack in Windows applications"
+    LANGUAGES CXX
+)
 
-if(NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE Release)
-    #set(CMAKE_BUILD_TYPE Debug)
+# get whether we are using multi-config generator or not
+get_property(StackWalker_MULTI_CONFIG GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+# only works for single-config generators like Ninja
+if(StackWalker_MULTI_CONFIG)
+    message(STATUS "Build config: Multi")
+else()
+    if(NOT CMAKE_BUILD_TYPE)
+        set(CMAKE_BUILD_TYPE Release)
+    endif()
+    message(STATUS "Build config: ${CMAKE_BUILD_TYPE}")
 endif()
 
-
 option(StackWalker_DISABLE_TESTS  "Disable tests" OFF)
-
 
 ###############################
 # Check compiler's capabilities
 ###############################
 
-include (CheckCXXCompilerFlag)
+include(CheckCXXCompilerFlag)
 
+# note: Clang not supported yet
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    set (CMAKE_COMPILER_IS_CLANG true)
+    set(CMAKE_COMPILER_IS_CLANG TRUE)
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
-    set (CMAKE_COMPILER_IS_MSVC true)
+    set(CMAKE_COMPILER_IS_MSVC TRUE)
+endif()
+
+# if available, print version string (usually available)
+if(DEFINED CMAKE_CXX_COMPILER_VERSION)
+    message(STATUS "Compiler version: ${CMAKE_CXX_COMPILER_VERSION}")
 endif()
 
 if(CMAKE_COMPILER_IS_MSVC)
@@ -53,65 +70,108 @@ if(CMAKE_COMPILER_IS_MSVC)
             set(MSVC_TOOLSET_VERSION 80)
         else()
             # We don't support MSVC_TOOLSET_VERSION for earlier compiler.
+            # FATAL_ERROR here since MSVC_TOOLSET_VERSION is used for PDB name
+            message(FATAL_ERROR "MSVC version ${MSVC_VERSION} is not supported")
         endif()
     endif()
 
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_SECURE_SCL=0")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_CRT_SECURE_NO_DEPRECATE")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_CRT_NONSTDC_NO_DEPRECATE")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_SCL_SECURE_NO_DEPRECATE")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Zi")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4740")
+    # MSVC flags (private to the build)
+    add_compile_options(/W4 /Zi /wd4740)
+    # we can use the add_compile_definitions for CMake >= 3.12.4
+    add_definitions(
+        # note: _SECURE_SCL superseded by _ITERATOR_DEBUG_LEVEL
+        /D_SECURE_SCL=0
+        /D_CRT_SECURE_NO_DEPRECATE
+        /D_CRT_NONSTDC_NO_DEPRECATE
+        /D_SCL_SECURE_NO_DEPRECATE
+    )
 else()
     message(FATAL_ERROR "${CMAKE_CXX_COMPILER_ID} is not supported yet")
 endif()
 
-message(STATUS "CMAKE_INSTALL_PREFIX: ${CMAKE_INSTALL_PREFIX}")
-set (CMAKE_INSTALL_INCLUDEDIR "${CMAKE_INSTALL_PREFIX}/include")
-set (CMAKE_INSTALL_LIBDIR "${CMAKE_INSTALL_PREFIX}/lib")
-set (CMAKE_INSTALL_BINDIR "${CMAKE_INSTALL_PREFIX}/bin")
-message(STATUS "CMAKE_INSTALL_INCLUDEDIR: ${CMAKE_INSTALL_INCLUDEDIR}")
-message(STATUS "CMAKE_INSTALL_LIBDIR: ${CMAKE_INSTALL_LIBDIR}")
-message(STATUS "CMAKE_INSTALL_BINDIR: ${CMAKE_INSTALL_BINDIR}")
-
-set(TARGET_StackWalker StackWalker)
-add_library(${TARGET_StackWalker} STATIC
-    Main/StackWalker/StackWalker.cpp)
-target_include_directories(${TARGET_StackWalker} PUBLIC
+# StackWalker main library (no support for shared build)
+set(sw_lib StackWalker)
+add_library(${sw_lib} STATIC Main/StackWalker/StackWalker.cpp)
+target_include_directories(
+    ${sw_lib} PUBLIC
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/Main/StackWalker>
-    )
+)
+# provide extra suffices (allows side-by-side Debug/Release install)
+set_target_properties(
+    ${sw_lib} PROPERTIES
+    DEBUG_POSTFIX d
+    # note: RelWithDebInfo is a little redundant (already using /Zi)
+    RELWITHDEBINFO_POSTFIX rd
+    # for static libraries, use COMPILE_PDB_NAME_<CONFIG> not PDB_NAME_<CONFIG>
+    COMPILE_PDB_NAME ${sw_lib}
+    COMPILE_PDB_NAME_DEBUG ${sw_lib}d
+    COMPILE_PDB_NAME_RELWITHDEBINFO ${sw_lib}rd
+)
+# install rule for StackWalker library (with export)
+# note: for CMake 3.15 and above, using relative prefixes enables using
+# --prefix with cmake --install to change the install prefix
+install(TARGETS ${sw_lib} EXPORT ${PROJECT_NAME}Targets DESTINATION lib)
+# install rule for the StackWalker header
+install(
+    FILES "${CMAKE_CURRENT_SOURCE_DIR}/Main/StackWalker/StackWalker.h"
+    DESTINATION include
+)
+# install rules for PDB files (generator expression for suffices)
+set(StackWalker_PDB_GEN "${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>/${sw_lib}")
+string(
+    APPEND StackWalker_PDB_GEN
+    "$<$<CONFIG:RelWithDebInfo>:r>$<$<NOT:$<CONFIG:Release>>:d>.pdb"
+)
+# note: install in bin because Visual Studio will look in the directory
+# that a DLL/EXE is in (e.g. if StackWalker was a DLL)
+install(FILES "${StackWalker_PDB_GEN}" DESTINATION bin)
 
-install(TARGETS "${TARGET_StackWalker}"
-    ARCHIVE  DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    LIBRARY  DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    RUNTIME  DESTINATION ${CMAKE_INSTALL_BINDIR}
-    )
-
-install(FILES "${CMAKE_SOURCE_DIR}/Main/StackWalker/StackWalker.h"
-    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
-
-if (MSVC_VERSION GREATER_EQUAL 1900)
-    set(PDB_StackWalker "${TARGET_StackWalker}.pdb")
-else()
-    set(PDB_StackWalker "vc${MSVC_TOOLSET_VERSION}.pdb")
-endif()
-install(FILES
-    "${CMAKE_CURRENT_BINARY_DIR}/${TARGET_StackWalker}.dir/$\{CMAKE_INSTALL_CONFIG_NAME\}/${PDB_StackWalker}"
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    RENAME "${TARGET_StackWalker}.pdb"
-    OPTIONAL)
-
-
-if (StackWalker_DISABLE_TESTS)
+# StackWalker test program
+if(StackWalker_DISABLE_TESTS)
     message(STATUS "Skipping tests")
 else()
     enable_testing()
-
-    set(TARGET_StackWalker_tests StackWalker_test)
-    add_executable(${TARGET_StackWalker_tests}
-        Main/StackWalker/main.cpp)
-    target_link_libraries(${TARGET_StackWalker_tests} PUBLIC ${TARGET_StackWalker})
-
-    add_test(NAME ${TARGET_StackWalker_tests} COMMAND ${TARGET_StackWalker_tests})
+    # StackWalker test/demo program
+    set(sw_test StackWalkerTest)
+    add_executable(${sw_test} Main/StackWalker/main.cpp)
+    target_link_libraries(${sw_test} PRIVATE ${sw_lib})
+    # for CTest
+    add_test(NAME ${sw_test} COMMAND ${sw_test})
 endif()
+
+##########################
+# CMake config packaging #
+##########################
+
+include(CMakePackageConfigHelpers)
+
+# relative install location for CMake files
+set(sw_cmake_install_dir lib/cmake/${PROJECT_NAME})
+# configure CMake config script for find_package
+set(sw_config_script ${PROJECT_NAME}Config.cmake)
+configure_package_config_file(
+    CMake/${sw_config_script}.in
+    "${CMAKE_CURRENT_BINARY_DIR}/${sw_config_script}"
+    # install with other CMake scripts
+    INSTALL_DESTINATION ${sw_cmake_install_dir}
+)
+# CMake version config file
+set(sw_version_script ${PROJECT_NAME}ConfigVersion.cmake)
+write_basic_package_version_file(
+    "${CMAKE_CURRENT_BINARY_DIR}/${sw_version_script}"
+    VERSION ${PROJECT_VERSION}
+    COMPATIBILITY AnyNewerVersion
+)
+# target export install rule (conventional to use project name in this fashion)
+install(
+    EXPORT ${PROJECT_NAME}Targets
+    DESTINATION ${sw_cmake_install_dir}
+    NAMESPACE ${PROJECT_NAME}::
+)
+# install CMake config and version config scripts
+install(
+    FILES
+        "${CMAKE_CURRENT_BINARY_DIR}/${sw_config_script}"
+        "${CMAKE_CURRENT_BINARY_DIR}/${sw_version_script}"
+    DESTINATION ${sw_cmake_install_dir}
+)

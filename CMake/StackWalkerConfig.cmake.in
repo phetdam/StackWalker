@@ -1,0 +1,16 @@
+# @PROJECT_NAME@Config.cmake
+#
+# @PROJECT_NAME@ CMake config script.
+#
+
+@PACKAGE_INIT@
+
+# include exported targets
+include("${CMAKE_CURRENT_LIST_DIR}/@PROJECT_NAME@Targets.cmake")
+
+# warn if user specifies components (not fatal)
+list(LENGTH @PROJECT_NAME@_FIND_COMPONENTS @PROJECT_NAME@_FIND_COMPONENTS_LENGTH)
+if(@PROJECT_NAME@_FIND_COMPONENTS_LENGTH)
+    message(WARNING "@PROJECT_NAME@ does not support components")
+endif()
+unset(@PROJECT_NAME@_FIND_COMPONENTS_LENGTH)
