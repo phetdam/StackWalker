@@ -95,6 +95,7 @@ add_library(${sw_lib} STATIC Main/StackWalker/StackWalker.cpp)
 target_include_directories(
     ${sw_lib} PUBLIC
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/Main/StackWalker>
+    $<INSTALL_INTERFACE:include>
 )
 # provide extra suffices (allows side-by-side Debug/Release install)
 set_target_properties(
