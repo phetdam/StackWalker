@@ -22,6 +22,11 @@ endif()
 
 option(StackWalker_DISABLE_TESTS  "Disable tests" OFF)
 
+# set flat output structure (with per-config subdirectories for multi-config)
+set(ARCHIVE_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}")
+set(LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}")
+set(RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}")
+
 ###############################
 # Check compiler's capabilities
 ###############################
@@ -123,7 +128,7 @@ install(
 set(StackWalker_PDB_GEN "${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>/${sw_lib}")
 string(
     APPEND StackWalker_PDB_GEN
-    "$<$<CONFIG:RelWithDebInfo>:r>$<$<NOT:$<CONFIG:Release>>:d>.pdb"
+    "$<$<CONFIG:Debug>:d>$<$<CONFIG:RelWithDebInfo>:rd>.pdb"
 )
 # note: install in bin because Visual Studio will look in the directory
 # that a DLL/EXE is in (e.g. if StackWalker was a DLL)
@@ -139,8 +144,12 @@ else()
     add_executable(${sw_test} Main/StackWalker/main.cpp)
     target_link_libraries(${sw_test} PRIVATE ${sw_lib})
     # for CTest
+    # note: remove? because the program requires interaction
     add_test(NAME ${sw_test} COMMAND ${sw_test})
 endif()
+
+# add any other tests
+add_subdirectory(Test)
 
 ##########################
 # CMake config packaging #
