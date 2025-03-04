@@ -1,15 +1,10 @@
-cmake_minimum_required(VERSION 3.9)
+cmake_minimum_required(VERSION 3.15)
 
 project(
     StackWalkerCMakeTest
     DESCRIPTION "StackWalker CMake usage test"
     LANGUAGES CXX
 )
-
-# accept StackWalker_ROOT if possible
-if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.12")
-    cmake_policy(SET CMP0074 NEW)
-endif()
 
 ##
 # Helper function to check if a variable is defined.

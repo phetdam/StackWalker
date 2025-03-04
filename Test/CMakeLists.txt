@@ -68,27 +68,15 @@ set_tests_properties(
 
 # test CMake config, e.g. locating the library and configuring a build
 # note: since CMake 3.12, better to use StackWalker_ROOT
-# TODO: -S, -B only available for CMake >= 3.13
-if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.12)
-    add_test(
-        NAME StackWalkerCMakeConfigTest
-        COMMAND ${CMAKE_COMMAND}
-                -S ${CMAKE_CURRENT_SOURCE_DIR}/StackWalkerCMakeTest
-                -B ${_test_usage_dir}
-                -DStackWalker_ROOT=${_test_install_dir}
-                -DStackWalker_FIND_VERSION=${PROJECT_VERSION}
-    )
-# old-style CMAKE_PREFIX_PATH
-else()
-    add_test(
-        NAME StackWalkerCMakeConfigTest
-        COMMAND ${CMAKE_COMMAND}
-                -S ${CMAKE_CURRENT_SOURCE_DIR}/StackWalkerCMakeTest
-                -B ${_test_usage_dir}
-                -DCMAKE_PREFIX_PATH=${_test_install_dir}
-                -DStackWalker_FIND_VERSION=${PROJECT_VERSION}
-    )
-endif()
+# note: -S, -B only available for CMake >= 3.13
+add_test(
+    NAME StackWalkerCMakeConfigTest
+    COMMAND ${CMAKE_COMMAND}
+            -S ${CMAKE_CURRENT_SOURCE_DIR}/StackWalkerCMakeTest
+            -B ${_test_usage_dir}
+            -DStackWalker_ROOT=${_test_install_dir}
+            -DStackWalker_FIND_VERSION=${PROJECT_VERSION}
+)
 # need both install and clean config
 set_tests_properties(
     StackWalkerCMakeConfigTest PROPERTIES
@@ -116,17 +104,17 @@ set_tests_properties(
 )
 
 # test running the external program
-# TODO: --test-dir only available in 3.20
+# note: --test-dir only available in 3.20
 if(StackWalker_MULTI_CONFIG)
     add_test(
         NAME StackWalkerCMakeCTestTest
-        COMMAND ${CMAKE_CTEST_COMMAND} -C $<CONFIG> -j20
+        COMMAND ${CMAKE_CTEST_COMMAND} -C $<CONFIG>
         WORKING_DIRECTORY ${_test_usage_dir}
     )
 else()
     add_test(
         NAME StackWalkerCMakeCTestTest
-        COMMAND ${CMAKE_CTEST_COMMAND} -j20
+        COMMAND ${CMAKE_CTEST_COMMAND}
         WORKING_DIRECTORY ${_test_usage_dir}
     )
 endif()

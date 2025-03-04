@@ -1,10 +1,10 @@
-cmake_minimum_required(VERSION 3.9)
+cmake_minimum_required(VERSION 3.15)
 
-# note: HOMEPAGE_URL was added in 3.12
 project(
     StackWalker
     VERSION 1.0.0
     DESCRIPTION "Walking the callstack in Windows applications"
+    HOMEPAGE_URL "https://github.com/JochenKalmbach/StackWalker"
     LANGUAGES CXX
 )
 
@@ -84,13 +84,12 @@ if(CMAKE_COMPILER_IS_MSVC)
 
     # MSVC flags (private to the build)
     add_compile_options(/W4 /Zi /wd4740)
-    # we can use add_compile_definitions for CMake >= 3.12.4
-    add_definitions(
+    add_compile_definitions(
         # note: _SECURE_SCL superseded by _ITERATOR_DEBUG_LEVEL
-        /D_SECURE_SCL=0
-        /D_CRT_SECURE_NO_DEPRECATE
-        /D_CRT_NONSTDC_NO_DEPRECATE
-        /D_SCL_SECURE_NO_DEPRECATE
+        _SECURE_SCL=0
+        _CRT_SECURE_NO_DEPRECATE
+        _CRT_NONSTDC_NO_DEPRECATE
+        _SCL_SECURE_NO_DEPRECATE
     )
 else()
     message(FATAL_ERROR "${CMAKE_CXX_COMPILER_ID} is not supported yet")
