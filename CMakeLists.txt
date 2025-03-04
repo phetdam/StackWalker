@@ -95,12 +95,30 @@ else()
     message(FATAL_ERROR "${CMAKE_CXX_COMPILER_ID} is not supported yet")
 endif()
 
+set(sw_version_h StackWalkerVer.h)
+# configure StackWalkerVer.h
+#
+# CMake variables consumed:
+#
+#   StackWalker_VERSION_MAJOR
+#   StackWalker_VERSION_MINOR
+#   StackWalker_VERSION_PATCH
+#   StackWalker_VERSION
+#
+configure_file(
+    Main/StackWalker/${sw_version_h}.in
+    ${PROJECT_BINARY_DIR}/include/${sw_version_h}
+    @ONLY
+)
+message(STATUS "Generated ${sw_version_h}")
+
 # StackWalker main library (no support for shared build)
 set(sw_lib StackWalker)
 add_library(${sw_lib} STATIC Main/StackWalker/StackWalker.cpp)
 target_include_directories(
     ${sw_lib} PUBLIC
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/Main/StackWalker>
+    $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/include>  # for generated headers
     $<INSTALL_INTERFACE:include>
 )
 # provide extra suffices (allows side-by-side Debug/Release install)
@@ -118,9 +136,11 @@ set_target_properties(
 # note: for CMake 3.15 and above, using relative prefixes enables using
 # --prefix with cmake --install to change the install prefix
 install(TARGETS ${sw_lib} EXPORT ${PROJECT_NAME}Targets DESTINATION lib)
-# install rule for the StackWalker header
+# install rule for the StackWalker headers
 install(
-    FILES "${CMAKE_CURRENT_SOURCE_DIR}/Main/StackWalker/StackWalker.h"
+    FILES
+        "${CMAKE_CURRENT_SOURCE_DIR}/Main/StackWalker/StackWalker.h"
+        "${PROJECT_BINARY_DIR}/include/${sw_version_h}"
     DESTINATION include
 )
 # install rules for PDB files (generator expression for suffices)
