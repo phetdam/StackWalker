@@ -140,6 +140,5 @@ void Func1(const void* /*data*/)
 int main()
 {
   inner1::Func1(nullptr);
-  inner1::Func1(nullptr);
   return EXIT_SUCCESS;
 }
