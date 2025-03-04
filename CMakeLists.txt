@@ -10,17 +10,17 @@ project(
 
 # get whether we are using multi-config generator or not
 get_property(StackWalker_MULTI_CONFIG GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
-# only works for single-config generators like Ninja
 if(StackWalker_MULTI_CONFIG)
     message(STATUS "Build config: Multi")
 else()
+    # only works for single-config generators like Ninja
     if(NOT CMAKE_BUILD_TYPE)
         set(CMAKE_BUILD_TYPE Release)
     endif()
     message(STATUS "Build config: ${CMAKE_BUILD_TYPE}")
 endif()
 
-option(StackWalker_DISABLE_TESTS  "Disable tests" OFF)
+option(StackWalker_DISABLE_TESTS "Disable tests" OFF)
 
 # set flat output structure (with per-config subdirectories for multi-config)
 set(ARCHIVE_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}")
@@ -84,7 +84,7 @@ if(CMAKE_COMPILER_IS_MSVC)
 
     # MSVC flags (private to the build)
     add_compile_options(/W4 /Zi /wd4740)
-    # we can use the add_compile_definitions for CMake >= 3.12.4
+    # we can use add_compile_definitions for CMake >= 3.12.4
     add_definitions(
         # note: _SECURE_SCL superseded by _ITERATOR_DEBUG_LEVEL
         /D_SECURE_SCL=0
